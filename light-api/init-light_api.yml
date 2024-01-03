@@ -1,0 +1,176 @@
+- hosts: all
+  remote_user: root
+  gather_facts: false
+  vars_files: var_map.yml
+  become: yes
+  tasks:
+    - name: Set WAX facts
+      set_fact:
+        light_api_template_dir: "./templates/light_api"
+        light_api_target_dir: "/opt/wax/light_api"
+        user: "wax"
+        env: "mainnet"
+      tags: always
+
+    - name: Manage light_api Assets API directory structure
+      block:
+        - file:
+            path: "{{ light_api_target_dir }}/{{ env }}"
+            state: directory
+            mode: '0755'
+            owner: "{{ user }}"
+            group: "{{ user }}"
+
+        - file:
+            path: "{{ light_api_target_dir }}/{{ env }}/mariadb/{{ item }}"
+            state: directory
+            mode: '0777'
+            owner: "{{ user }}"
+            group: "{{ user }}"
+          with_items:
+            - data
+            - snapshots
+
+        - file:
+            path: "{{ light_api_target_dir }}/{{ env }}/config"
+            state: directory
+            mode: '0777'
+            owner: "{{ user }}"
+            group: "{{ user }}"
+
+        - file:
+            path: "{{ light_api_target_dir }}/{{ env }}/chronicle/{{ item }}"
+            state: directory
+            mode: '0777'
+            owner: "{{ user }}"
+            group: "{{ user }}"
+          with_items:
+            - chronicle-config
+            - chronicle-data
+            - snapshots
+
+        - name: Manage light_api_api templates
+          block:
+            - template:
+                src: "{{ light_api_template_dir }}/{{ env }}/{{ item }}.j2"
+                dest: "{{ light_api_target_dir }}/{{ env }}/config/{{ item }}"
+                owner: "{{ user }}"
+                group: "{{ user }}"
+                mode: '0755'
+              with_items:
+                - ["my.cnf","lightapi_addnet.pl","lightapi_dbwrite.pl","lightapi_holdercounts.pl","lightapi_wsapi.js","lightapi.psgi","sysbalances.pl","chronicle_snapshot_create.sh","chronicle_snapshot_restore.sh","chronicle_sync_check.sh","download_snapshots.sh"]
+
+            - template:
+                src: "{{ light_api_template_dir }}/{{ env }}/chronicle_config.ini.j2"
+                dest: "{{ light_api_target_dir }}/{{ env }}/chronicle/chronicle-config/config.ini"
+                owner: "{{ user }}"
+                group: "{{ user }}"
+                mode: '0755'
+
+            - template:
+                src: "{{ light_api_template_dir }}/sql/{{ item }}.j2"
+                dest: "{{ light_api_target_dir }}/{{ env }}/mariadb/snapshots/{{ item }}"
+                owner: "{{ user }}"
+                group: "{{ user }}"
+                mode: '0755'
+              with_items:
+                - ["create_tables.sh","lightapi_dbcreate.sql","lightapi_dbtables.psql","restore_db.sh"]
+
+            - template:
+                src: "{{ light_api_template_dir }}/{{ env }}/{{ item }}.j2"
+                dest: "{{ light_api_target_dir }}/{{ env }}/{{ item }}"
+                owner: "{{ user }}"
+                group: "{{ user }}"
+                mode: '0755'
+              with_items:
+                - ["docker-compose.yml"]
+
+      tags: deploy_config
+
+    - name: Init light_api Assets API cluster
+      block:
+        - name: Startup light_api API
+          become_user: "{{ user }}"
+          shell: docker-compose down
+          args:
+            chdir: "{{ light_api_target_dir }}/{{ env }}"
+          register: docker_compose
+        - debug: var=docker_compose
+
+        - name: Startup light_api API
+          become_user: "{{ user }}"
+          shell: docker-compose up --no-start
+          args:
+            chdir: "{{ light_api_target_dir }}/{{ env }}"
+          register: docker_compose
+        - debug: var=docker_compose
+
+        - name: Startup light_api MARIADB
+          become_user: "{{ user }}"
+          shell: "docker-compose start {{ item }}"
+          args:
+            chdir: "{{ light_api_target_dir }}/{{ env }}"
+          with_items:
+            - ["eosio-lightapi-mariadb"]
+          register: docker_compose
+        - debug: var=docker_compose
+
+        - name: Download LIGHTAPI snapshots
+          become_user: "{{ user }}"
+          shell: "/usr/bin/screen -dmS lightapi_restore bash -x {{ light_api_target_dir }}/{{ env }}/config/download_snapshots.sh"
+          args:
+            chdir: "{{ light_api_target_dir }}/{{ env }}"
+          with_items:
+            - ["eosio-lightapi-mariadb"]
+          register: docker_compose
+        - debug: var=docker_compose
+
+      tags: init_light_api_api
+
+    - name: Start Atomic Assets API cluster
+      block:
+        - name: Startup light_api SHIP readers
+          become_user: "{{ user }}"
+          shell: "docker-compose start {{ item }}"
+          args:
+            chdir: "{{ light_api_target_dir }}/{{ env }}"
+          with_items:
+            - ["eosio-lightapi-dbwriter","eosio-lightapi-chronicle"]
+          register: docker_compose
+        - debug: var=docker_compose
+
+        - name: Startup light_api API
+          become_user: "{{ user }}"
+          shell: "docker-compose start {{ item }}"
+          args:
+            chdir: "{{ light_api_target_dir }}/{{ env }}"
+          with_items:
+            - ["eosio-lightapi-wsapi","eosio-lightapi","eosio-lightapi-cron"]
+          register: docker_compose
+        - debug: var=docker_compose
+      tags: startup_light_api
+
+
+    - name: Add wax backup scripts
+      block:
+        - template:
+            src: "{{ light_api_template_dir }}/sql/{{ item }}.j2"
+            dest: "/opt/wax/light_api/{{ item }}"
+            owner: "wax"
+            group: "wax"
+            mode: '0777'
+          with_items:
+            - ["dump_db.sh","restore_db.sh"]
+
+        - cron:
+            name: "Wax Light API Mainnet snapshot"
+            minute: "{{ 60 | random }}"
+            hour: "4"
+            job: "( bash -x /opt/wax/light_api/dump_db.sh 2>&1 ) >> /var/log/light_api_db_dump.log"
+
+        - cron:
+            name: "Wax Light API CHRONICLE Mainnet snapshot"
+            minute: "{{ 60 | random }}"
+            hour: "*"
+            job: "( bash -x /opt/wax/light_api/mainnet/config/chronicle_snapshot_create.sh 2>&1 ) >> /var/log/chronicle_snapshot.log"
+      tags: backup_light_api

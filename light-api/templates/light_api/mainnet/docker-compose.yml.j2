@@ -1,0 +1,105 @@
+version: '3.0'
+services:
+  eosio-lightapi-mariadb:
+    container_name: eosio-lightapi-mariadb
+    image: mariadb:latest
+    restart: on-failure
+    environment:
+      - 'MARIADB_ROOT_PASSWORD={{ node1.light_api.mainnet.maria_db.root }}'
+      - 'MYSQL_USER={{ node1.light_api.mainnet.maria_db.user }}'
+      - 'MYSQL_PASSWORD={{ node1.light_api.mainnet.maria_db.password }}'
+      - 'MYSQL_DATABASE={{ node1.light_api.mainnet.maria_db.dbname }}'
+    ports:
+      - "127.0.0.1:{{  node1.light_api.mainnet.maria_db.port }}:{{  node1.light_api.mainnet.maria_db.port }}"
+    volumes:
+      - ./config/my.cnf:/etc/mysql/my.cnf
+      - ./mariadb/data:/var/lib/mysql
+      - ./mariadb/snapshots:/var/lib/snapshots
+    networks:
+      - eosio-lightapi
+
+  eosio-lightapi-dbwriter:
+    container_name: eosio-lightapi-dbwriter
+    image: {{  node1.light_api.mainnet.dbwriter.image }}
+    command: /usr/bin/perl /opt/eosio_light_api/scripts/lightapi_dbwrite.pl --network={{  node1.light_api.mainnet.dbwriter.network }} --port={{  node1.light_api.mainnet.dbwriter.port }}
+    restart: always
+    ports:
+      - "{{  node1.light_api.mainnet.dbwriter.port }}:{{  node1.light_api.mainnet.dbwriter.port }}"
+    depends_on:
+      - eosio-lightapi-mariadb
+    volumes:
+      - ./config/lightapi_dbwrite.pl:/opt/eosio_light_api/scripts/lightapi_dbwrite.pl
+    networks:
+      - eosio-lightapi
+
+  eosio-lightapi-chronicle:
+    container_name: eosio-lightapi-chronicle
+    image: {{  node1.light_api.mainnet.chronicle.image }}
+    command: /usr/local/sbin/chronicle-receiver --config-dir=/var/local/chronicle/chronicle-config --data-dir=/var/local/chronicle/chronicle-data
+    restart: always
+    depends_on:
+      - eosio-lightapi-mariadb
+      - eosio-lightapi-dbwriter
+    volumes:
+      - ./chronicle/:/var/local/chronicle/
+    networks:
+      - eosio-lightapi
+
+  eosio-lightapi-wsapi:
+    container_name: eosio-lightapi-wsapi
+    image: {{  node1.light_api.mainnet.wsapi.image }}
+    command: /usr/local/bin/node /opt/eosio_light_api/wsapi/lightapi_wsapi.js --httpport {{  node1.light_api.mainnet.wsapi.port }} --httphost 0.0.0.0
+    restart: always
+    ports:
+      - "{{  node1.light_api.mainnet.wsapi.port }}:{{  node1.light_api.mainnet.wsapi.port }}"
+    depends_on:
+      - eosio-lightapi-mariadb
+    volumes:
+      - ./config/lightapi_wsapi.js:/opt/eosio_light_api/wsapi/lightapi_wsapi.js
+    networks:
+      - eosio-lightapi
+
+  eosio-lightapi:
+    container_name: eosio-lightapi
+    image: {{  node1.light_api.mainnet.dbwriter.image }}
+    command: /usr/local/bin/starman --listen 0.0.0.0:{{  node1.light_api.mainnet.api.port }} --workers {{  node1.light_api.mainnet.api.workers }} /opt/eosio_light_api/api/lightapi.psgi
+    restart: always
+    ports:
+      - "{{  node1.light_api.mainnet.api.port }}:{{  node1.light_api.mainnet.api.port }}"
+    depends_on:
+      - eosio-lightapi-mariadb
+    volumes:
+      - ./config/lightapi.psgi:/opt/eosio_light_api/api/lightapi.psgi
+    networks:
+      - eosio-lightapi
+
+  eosio-lightapi-cron:
+    container_name: eosio-lightapi-cron
+    image: {{  node1.light_api.mainnet.dbwriter.image }}
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do perl /opt/eosio_light_api/scripts/lightapi_holdercounts.pl ; sleep 300 & wait $${!}; done;'"
+    restart: always
+    depends_on:
+      - eosio-lightapi-mariadb
+    volumes:
+      - ./config/lightapi_holdercounts.pl:/opt/eosio_light_api/scripts/lightapi_holdercounts.pl
+    networks:
+      - eosio-lightapi
+
+#######Debug Containers
+
+  eosio-lightapi-chronicle-bootstrap:
+    container_name: eosio-lightapi-chronicle-bootstrap
+    image: {{  node1.light_api.mainnet.chronicle.image }}
+    command: /bin/bash -c "sleep infinity"
+    restart: no
+    depends_on:
+      - eosio-lightapi-mariadb
+      - eosio-lightapi-dbwriter
+    volumes:
+      - ./chronicle/:/var/local/chronicle/
+    networks:
+      - eosio-lightapi
+
+networks:
+  eosio-lightapi:
+    driver: bridge

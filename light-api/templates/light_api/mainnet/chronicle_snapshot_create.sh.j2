@@ -1,0 +1,27 @@
+#!/bin/bash
+
+cd /opt/wax/light_api/mainnet/ ;
+
+docker-compose stop eosio-lightapi-chronicle
+
+datetime_now_epoch=$(date -d"$(date +"%Y-%m-%dT%H:%M:%S.%3N" -u)" +%s)
+
+docker-compose start eosio-lightapi-chronicle-bootstrap
+
+docker exec eosio-lightapi-chronicle-bootstrap /bin/sh -c "/usr/local/sbin/chronicle-receiver --config-dir=/var/local/chronicle/chronicle-config --data-dir=/var/local/chronicle/chronicle-data --save-snapshot=/var/local/chronicle/snapshots/wax.snapshot_$datetime_now_epoch"
+
+docker-compose stop eosio-lightapi-chronicle-bootstrap
+
+for i in $(seq 1 30); do
+if [ $(docker ps -q -f name=eosio-lightapi-chronicle) ]; then
+    echo "Container eosio-lightapi-chronicle is already running."
+    sleep 1
+else
+    docker-compose start eosio-lightapi-chronicle
+    sleep 5
+fi
+done
+
+rsync -a /opt/wax/light_api/mainnet/chronicle/snapshots/  {{ node1.light_api.mainnet.backup_server }}:/wax-backups/light_api/mainnet/chronicle_snapshots/ --log-file=/var/log/rsync_light_api_chronicle.log
+
+find /opt/wax/light_api/mainnet/chronicle/snapshots/ -type f -mmin +360 -exec rm -rf {} \;

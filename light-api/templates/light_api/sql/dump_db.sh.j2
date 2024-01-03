@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+datetime_now_epoch=$(date -d"$(date +"%Y-%m-%dT%H:%M:%S.%3N" -u)" +%s)
+
+mkdir -p /opt/wax/light_api/mainnet/mariadb/snapshots/dumps
+
+docker exec eosio-lightapi-mariadb /bin/sh -c "mariadb-dump -u root -p{{ node1.light_api.mainnet.maria_db.root }} {{ node1.light_api.mainnet.maria_db.dbname }} > /var/lib/snapshots/dumps/lightapi_db.sql.$datetime_now_epoch.dump"
+
+rsync -a /opt/wax/light_api/mainnet/mariadb/snapshots/dumps  {{ node1.light_api.mainnet.backup_server }}:/wax-backups/light_api/mainnet/mariadb_dumps/ --log-file=/var/log/rsync_light_api_mariadb.log
+
+find /opt/wax/light_api/mainnet/mariadb/snapshots/dumps/ -type f -mmin +360 -exec rm -rf {} \;
+

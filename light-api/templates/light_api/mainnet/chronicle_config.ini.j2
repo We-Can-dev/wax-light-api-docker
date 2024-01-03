@@ -1,0 +1,11 @@
+host = {{ node1.wax_history_ip.mainnet }}
+port = {{ node1.wax_history_port.mainnet }}
+mode = scan
+plugin = exp_ws_plugin
+exp-ws-host = {{  node1.light_api.mainnet.dbwriter.host }}
+exp-ws-port = {{  node1.light_api.mainnet.dbwriter.port }}
+exp-ws-bin-header = true
+skip-block-events = true
+skip-traces = true
+blacklist-tables-contract = atomicassets
+blacklist-tables-contract = atomicmarket

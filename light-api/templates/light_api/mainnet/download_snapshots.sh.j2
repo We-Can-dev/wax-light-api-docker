@@ -1,0 +1,12 @@
+#!/bin/bash
+
+cd {{ light_api_target_dir }}/{{ env }}/ ;
+rm -f {{ light_api_template_dir }}/{{ env }}/mariadb/snapshots/lightapi_db.sql.dump ;
+rm -f {{ light_api_template_dir }}/{{ env }}/chronicle/wax.snapshot ;
+rm -rf {{ light_api_template_dir }}/{{ env }}/chronicle/chronicle-data ;
+wget {{ node1.light_api.mainnet.maria_db.snapshot }} -O {{ light_api_target_dir }}/{{ env }}/mariadb/snapshots/lightapi_db.sql.dump ;
+wget {{ node1.light_api.mainnet.chronicle.snapshot }} -O {{ light_api_target_dir }}/{{ env }}/chronicle/wax.snapshot ;
+bash -x {{ light_api_target_dir }}/{{ env }}/mariadb/snapshots/restore_db.sh ;
+bash -x {{ light_api_target_dir }}/{{ env }}/config/chronicle_snapshot_restore.sh ;
+
+

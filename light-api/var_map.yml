@@ -1,0 +1,59 @@
+---
+all:
+  vars:
+    node1:
+      light_api:
+           mainnet:
+              backup_server: 127.0.0.1
+              chronicle:
+                   image: wecandev/eosio-lightapi-chronicle:3.3
+                   snapshot: https://backup.wecan.dev/wax/light_api/mainnet/chronicle_snapshots/wax.snapshot_1704212581
+              dbwriter:
+                   image: wecandev/eosio-lightapi-dbwriter:latest
+                   port: 8100
+                   network: wax
+                   host: eosio-lightapi-dbwriter
+              wsapi:
+                   image: wecandev/eosio-lightapi-wsapi:latest
+                   port: 5101
+              api:
+                   port: 5891
+                   workers: 6
+              maria_db:
+                   root: "your_root_maria_pwd"
+                   user: "your_non_root_maria_user"
+                   password: "your_pwd_for_non_root_maria_user"
+                   dbname: "lightapi"
+                   port: 3306
+                   host: eosio-lightapi-mariadb
+                   snapshot: https://backup.wecan.dev/wax/light_api/mainnet/mariadb_dumps/dumps/lightapi_db.sql.1704213301.dump
+           mainnet:
+              backup_server: 127.0.0.1
+              chronicle:
+                   image: wecandev/eosio-lightapi-chronicle:3.3
+                   snapshot: https://backup.wecan.dev/wax/light_api/mainnet/chronicle_snapshots/wax.snapshot_1704212581
+              dbwriter:
+                   image: wecandev/eosio-lightapi-dbwriter:latest
+                   port: 8100
+                   network: wax
+                   host: eosio-lightapi-dbwriter
+              wsapi:
+                   image: wecandev/eosio-lightapi-wsapi:latest
+                   port: 5101
+              api:
+                   port: 5891
+                   workers: 6
+              maria_db:
+                   root: "your_root_maria_pwd"
+                   user: "your_non_root_maria_user"
+                   password: "your_pwd_for_non_root_maria_user"
+                   dbname: "lightapi"
+                   port: 3306
+                   host: eosio-lightapi-mariadb
+                   snapshot: https://backup.wecan.dev/wax/light_api/mainnet/mariadb_dumps/dumps/lightapi_db.sql.1704213301.dump
+
+general_allowed_ports:
+  - "{{ node1.light_api.mainnet.dbwriter.port }}"
+  - "{{ node1.light_api.mainnet.wsapi.port }}"
+  - "{{ node1.light_api.mainnet.api.port }}"
+  - "{{ node1.light_api.mainnet.maria_db.port }}"

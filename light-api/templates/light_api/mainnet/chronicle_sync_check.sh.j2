@@ -1,0 +1,8 @@
+#!/bin/bash
+
+while true; do
+
+curl -sk http://$(hostname -f):5891/api/status ; echo
+sleep 2
+
+done

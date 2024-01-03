@@ -1,0 +1,12 @@
+NETWORK=$1
+
+if [ x${NETWORK} = x ]; then echo "Network required" 1>&2; exit 1; fi
+
+sed -e 's,\%\%,'${NETWORK}',g' lightapi_dbtables.psql > lightapi_dbtables_network.psql
+
+docker exec eosio-lightapi-mariadb /bin/sh -c 'mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} -e "DROP DATABASE IF EXISTS {{ node1.light_api.mainnet.maria_db.dbname }};"'
+#docker exec eosio-lightapi-mariadb /bin/sh -c 'mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} -e "CREATE DATABASE {{ node1.light_api.mainnet.maria_db.dbname }};"'
+docker exec eosio-lightapi-mariadb /bin/sh -c "mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} {{ node1.light_api.mainnet.maria_db.dbname }} < /var/lib/snapshots/lightapi_dbcreate.sql"
+docker exec eosio-lightapi-mariadb /bin/sh -c "mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} {{ node1.light_api.mainnet.maria_db.dbname }} < /var/lib/snapshots/lightapi_dbtables_network.psql"
+
+if [ $? -eq 0 ]; then echo "Done"; else echo "Errors encountered"; fi
