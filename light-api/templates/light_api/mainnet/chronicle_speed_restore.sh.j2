@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Infinite loop
+while true; do
+    # Docker commands
+    cd {{ light_api_target_dir }}/{{ env }}
+    docker-compose rm -f -s -v eosio-lightapi-chronicle
+    cd {{ light_api_target_dir }}/{{ env }}
+    docker-compose up -d eosio-lightapi-chronicle
+
+    # Wait for 10 seconds
+    sleep 10
+
+    # Check endpoint
+    if curl -s http://$(hostname -f):5891/api/status | grep -q "OK"; then
+        echo "Endpoint returned OK. Exiting loop."
+        break
+    fi
+
+    echo "Waiting for endpoint to return OK..."
+done

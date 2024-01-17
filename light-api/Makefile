@@ -42,7 +42,10 @@ restore-lightapi_db_dump: ## RESTORE WAX Lightapi db snapshots
 	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS lightapi_restore bash /opt/wax/light_api/${ENV}/mariadb/snapshots/restore_db.sh'
 
 restore-chronicle_snapshot: ## RESTORE WAX Lightapi Chronicle snapshots
-	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS chronicle_restore bash /opt/wax/light_api/${ENV}/mariadb/snapshots/restore_db.sh'
+	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS chronicle_restore bash /opt/wax/light_api/${ENV}/config/chronicle_snapshot_restore.sh'
+
+restore-chronicle_speed_up_restore: ## RESTORE WAX Lightapi Chronicle - restart with 10 sec timeout to speed up sync
+	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS chronicle_speed_restore bash /opt/wax/light_api/${ENV}/config/chronicle_speed_restore.sh.sh'
 
 start-container_chronicle: ## Start light indexer
 	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) 'cd /opt/wax/light_api/${ENV}; docker-compose up -d eosio-lightapi-chronicle'  || exit 0
