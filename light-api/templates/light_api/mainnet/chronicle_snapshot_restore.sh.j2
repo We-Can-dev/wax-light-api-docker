@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-cd /opt/wax/light_api/mainnet/ ;
+cd {{ light_api_template_dir }}/{{ env }}/ ;
+
+rm -f {{ light_api_template_dir }}/{{ env }}/chronicle/wax.snapshot ;
+rm -rf {{ light_api_template_dir }}/{{ env }}/chronicle/chronicle-data ;
+
+wget {{ node1.light_api.mainnet.chronicle.snapshot }} -O {{ light_api_target_dir }}/{{ env }}/chronicle/wax.snapshot ;
 
 docker-compose stop eosio-lightapi-chronicle
 

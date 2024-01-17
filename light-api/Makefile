@@ -39,7 +39,10 @@ nuke-light_data: stop-cluster_light ## Destroy light-api data
 	( [ $$CONTINUE = "y" ] || [ $$CONTINUE = "Y" ] ) && 	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) 'rm -rf /opt/wax/light_api/${ENV}/{chronicle,mariadb,config};'  || exit 0
 
 restore-lightapi_db_dump: ## RESTORE WAX Lightapi db snapshots
-	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS lightapi_restore bash /opt/wax/light_api/mainnet/mariadb/snapshots/restore_db.sh'
+	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS lightapi_restore bash /opt/wax/light_api/${ENV}/mariadb/snapshots/restore_db.sh'
+
+restore-chronicle_snapshot: ## RESTORE WAX Lightapi Chronicle snapshots
+	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) '/usr/bin/screen -dmS chronicle_restore bash /opt/wax/light_api/${ENV}/mariadb/snapshots/restore_db.sh'
 
 start-container_chronicle: ## Start light indexer
 	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) 'cd /opt/wax/light_api/${ENV}; docker-compose up -d eosio-lightapi-chronicle'  || exit 0
@@ -111,4 +114,4 @@ log-mariadb: ## Tail logs from light Indexer
 	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) 'docker logs -n 50 -f eosio-lightapi-mariadb' || exit 0
 
 log-light_api_sync: ## Check Light APi sync
-	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) 'bash /opt/wax/light_api/mainnet/config/chronicle_sync_check.sh'
+	ssh -o StrictHostKeyChecking=no root@$(TARGET_HOST) 'bash /opt/wax/light_api/${ENV}/config/chronicle_sync_check.sh'
