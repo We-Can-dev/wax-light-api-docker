@@ -58,7 +58,7 @@
                 group: "{{ user }}"
                 mode: '0755'
               with_items:
-                - ["my.cnf","lightapi_addnet.pl","lightapi_dbwrite.pl","lightapi_holdercounts.pl","lightapi_wsapi.js","lightapi.psgi","sysbalances.pl","chronicle_snapshot_create.sh","chronicle_snapshot_restore.sh","chronicle_sync_check.sh","download_snapshots.sh"]
+                - ["my.cnf","lightapi_addnet.pl","lightapi_dbwrite.pl","lightapi_holdercounts.pl","lightapi_wsapi.js","lightapi.psgi","sysbalances.pl","chronicle_speed_restore.sh","chronicle_snapshot_create.sh","chronicle_snapshot_restore.sh","chronicle_sync_check.sh","download_snapshots.sh"]
 
             - template:
                 src: "{{ light_api_template_dir }}/{{ env }}/chronicle_config.ini.j2"

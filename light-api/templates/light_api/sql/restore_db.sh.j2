@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
 #docker exec eosio-lightapi-mariadb /bin/sh -c 'mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} -e "DROP DATABASE IF EXISTS {{ node1.light_api.mainnet.maria_db.dbname }};"'
 #docker exec eosio-lightapi-mariadb /bin/sh -c 'mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} -e "CREATE DATABASE {{ node1.light_api.mainnet.maria_db.dbname }};"'
+
+cd {{ light_api_target_dir }}/{{ env }}/ ;
+rm -f {{ light_api_template_dir }}/{{ env }}/mariadb/snapshots/lightapi_db.sql.dump ;
+
+wget {{ node1.light_api.mainnet.maria_db.snapshot }} -O {{ light_api_target_dir }}/{{ env }}/mariadb/snapshots/lightapi_db.sql.dump ;
+
 docker exec eosio-lightapi-mariadb /bin/sh -c "mariadb -u root -p{{ node1.light_api.mainnet.maria_db.root }} {{ node1.light_api.mainnet.maria_db.dbname }} < /var/lib/snapshots/lightapi_db.sql.dump"
